@@ -1,0 +1,167 @@
+<!DOCTYPE html>             
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8">
+        <title>D3 GDP</title>
+        <script src="https://d3js.org/d3.v5.min.js"></script>  
+        <link rel="stylesheet" type='text/css' href='style.css'> 
+    </head>
+    
+    <body>
+        <h1 id="us">United States GDP</h1>
+        <div id="d3render"></div>
+    </body>
+        
+    <script>
+        async function getDataThenRunPage() {
+            const gdpData = await fetch("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json")
+            .then(res => res.json())
+            .catch(err => console.log(err))
+
+            const svgWidth = 1000;
+            const svgHeight = 600;
+            const padding = 100;
+        
+            const svg = d3.select('#d3render')
+            .append('svg')
+            .attr('width', svgWidth)
+            .attr('height', svgHeight)
+            .attr('id', 'title')
+            .style('background-color', 'white')
+           
+            const xScale = d3.scaleLinear()
+            .domain( [1947, 2015.75] )
+            .range( [padding, svgWidth - padding] )
+            
+            const yScale = d3.scaleLinear()
+            .domain([0, d3.max(gdpData.data, (d) => d[1])])
+            .range([svgHeight -padding, padding])
+
+            const tooltip = d3.select("#d3render")
+            .append('div')
+            .attr('id', 'tooltip')
+            .style('height','80px')
+            .style('width', '140px')
+            .style('background-color', 'blue')
+            .style('border-radius', "5px")
+            .style('position', 'absolute')
+            .style('opacity', 0)
+            .style('font-size', '18px')
+
+            const dateDisplay = d3.select('#tooltip')
+            .append('div')
+            .style('height', '40px')
+            .style('width', '140px')
+            .style('padding-top', '10px')
+
+            const gdpDisplay = d3.select('#tooltip')
+            .append('div')
+            .style('height', '40px')
+            .style('width', '150px')
+            .style('padding-bottom', '10px')
+           
+
+
+            svg.selectAll('rect')
+            .data(gdpData.data)
+            .enter()
+            .append('rect')
+            .attr('x', (d, i) => {
+                const getYearRegex = /[0-9]{4}/;
+                const getMonthWithHyphenRegex = /-[0-9]{2}/;
+                const getMonthRegex = /[0-9]{2}/;
+                const year = Number(d[0].match(getYearRegex));
+                const hyphenMonth = d[0].match(getMonthWithHyphenRegex);
+                const month = Number(hyphenMonth[0].match(getMonthRegex));
+
+                if(month === 1) {
+                    return xScale(year)
+                }
+                if(month === 4) {
+                    return xScale(year + .25)
+                }
+                if(month === 7) {
+                    return xScale(year + .50)
+                }
+                if(month === 10) {
+                    return xScale(year + .75)
+                }
+            })
+            .attr('y', (d,i) =>  yScale(d[1]) )
+            .attr('width', (svgWidth - padding - padding) / gdpData.data.length )
+            .attr('height', (d) => svgHeight - yScale(d[1]) - padding)
+            .attr('fill', 'blue')
+            .attr('class', 'bar')
+            .attr('data-date', (d) => d[0])
+            .attr('data-gdp', (d) => d[1])
+            .on('mouseover', (d) => {
+                //console.log('mousover works',d)
+                let gdpInfo = d;
+
+                tooltip
+                .data(gdpInfo)
+                .style('left', () => {
+                    return event.pageX + 'px'
+                })
+                .style('top', () => {
+                    console.log(event.pageY)
+                    return  '420px'
+                })
+                .attr('data-date', (gdpInfo) => d[0])
+                .attr('data-gdp', (gdpInfo) => d[1])
+                .style('opacity', 1)
+
+                const getYearRegex = /[0-9]{4}/;
+                const getMonthWithHyphenRegex = /-[0-9]{2}/;
+                const getMonthRegex = /[0-9]{2}/;
+                const year = Number(gdpInfo[0].match(getYearRegex));
+                const hyphenMonth = gdpInfo[0].match(getMonthWithHyphenRegex);
+                const month = Number(hyphenMonth[0].match(getMonthRegex));
+                let quarter = null;
+                if(month === 1) {
+                     quarter = 1;
+                }
+                if(month === 4) {
+                    quarter = 2;
+                }
+                if(month === 7) {
+                    quarter = 3;
+                }
+                if(month === 10) {
+                    quarter = 4;
+                }
+
+                dateDisplay
+                .data(gdpInfo)
+                .text(`Q${quarter} ${year}`)
+
+                gdpDisplay
+                .data(gdpInfo)
+                .text(`$${gdpInfo[1]} Billion`)
+            })
+            .on('mouseout', (d) => {
+                 tooltip
+                 .style('opacity', 0)
+            })
+
+            let xAxis = d3.axisBottom(xScale).tickFormat(d3.format("d"))
+
+            svg.append("g")
+            .attr("transform", `translate(0, ${ svgHeight - padding })`)
+            .call(xAxis)
+            .attr('id', 'x-axis')
+            .attr('class', 'tick')
+
+
+            const yAxis = d3.axisLeft(yScale);
+
+            svg.append("g")
+            .attr('transform', `translate( ${padding}, 0)`)
+            .call(yAxis)
+            .attr('id', 'y-axis')
+            .attr('class', 'tick')
+        }
+        getDataThenRunPage();
+        
+    </script>
+</html>
